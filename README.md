@@ -35,9 +35,9 @@ NestJS와 Socket.IO를 기반으로 구현하는 실시간 1:1 채팅 서비스�
   - 채팅 메시지
 
 - Redis
-  - 로그인 세션
-  - 사용자 접속 상태
-  - Socket.IO Pub/Sub
+  - 로그인 세션 관리
+  - 사용자 접속 상태 관리 (예정)
+  - Socket.IO Pub/Sub (예정)
 
 ### Development Environment
 
@@ -65,8 +65,14 @@ realtime-chat/
 
 현재 계획 중인 주요 기능은 다음과 같습니다.
 
-- 회원가입 및 로그인
+- 회원가입
+- Argon2id 기반 비밀번호 해싱
+- UUID v7 기반 사용자 외부 식별자
+- 로그인 / 로그아웃
 - Redis 기반 로그인 세션 관리
+- HttpOnly Cookie 기반 세션 전달
+- SessionAuthGuard 기반 인증 처리
+- 로그인 사용자 정보 조회
 - 사용자별 고유 친구 코드 생성
 - 친구 코드 기반 사용자 검색
 - 친구 요청 및 승인
@@ -231,12 +237,17 @@ docker volume ls
 
 ### Phase 2 - Authentication
 
-- [ ] PostgreSQL / Prisma 연결
-- [ ] User 모델 설계
-- [ ] 회원가입
-- [ ] 로그인
-- [ ] Redis Session 적용
-- [ ] 로그아웃
+- [x] PostgreSQL / Prisma 연결
+- [x] User 모델 설계 및 migration
+- [x] 회원가입
+- [x] Argon2id 기반 비밀번호 해싱
+- [x] UUID v7 기반 외부 식별자 적용
+- [x] 로그인
+- [x] Redis Session 적용
+- [x] HttpOnly Cookie 기반 세션 전달
+- [x] 로그아웃
+- [x] SessionAuthGuard 구현
+- [x] 인증 사용자 정보 조회 (`GET /users/me`)
 
 ### Phase 3 - Friends
 
@@ -301,6 +312,11 @@ Socket.IO Pub/Sub
 
 ## Status
 
-현재 프로젝트 기본 구조 및 로컬 Docker 인프라 구성이 완료된 상태입니다.
+Docker 기반 PostgreSQL, MongoDB, Redis 개발 환경과
+Prisma 기반 User 스키마 구성이 완료되었습니다.
 
-다음 단계에서는 NestJS에 Prisma를 적용하고 PostgreSQL과 연결한 뒤 사용자 인증 기능부터 구현할 예정입니다.
+현재 회원가입, 로그인, 로그아웃, Redis 세션 관리,
+HttpOnly Cookie 기반 인증, SessionAuthGuard,
+인증 사용자 정보 조회 기능까지 구현된 상태입니다.
+
+다음 단계에서는 친구 코드 기반 친구 요청 및 친구 관계 기능을 구현할 예정입니다.
