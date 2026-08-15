@@ -1,0 +1,4 @@
+@baseUrl = http://localhost:3001
+
+### 회원 정보 조회
+GET {{baseUrl}}/users/me

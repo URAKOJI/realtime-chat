@@ -1,0 +1,26 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           BigInt    @id @default(autoincrement())
+  uid          String    @unique @db.Uuid
+  email        String    @unique @db.VarChar(255)
+  nickname     String    @db.VarChar(100)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  friendCode   String    @unique @map("friend_code") @db.Char(8)
+
+  lastLoginAt DateTime? @map("last_login_at") @db.Timestamptz(3)
+
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("users")
+}

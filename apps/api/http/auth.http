@@ -1,0 +1,23 @@
+@baseUrl = http://localhost:3001
+
+### 회원가입
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123!",
+  "nickname": "koji"
+}
+
+### 로그인
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123!"
+}
+
+#### 로그아웃
+POST {{baseUrl}}/auth/logout
