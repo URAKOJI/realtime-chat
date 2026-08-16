@@ -8,6 +8,12 @@ async function bootstrap() {
 
   app.use(cookieParser());
 
+  // Enable CORS for requests from the frontend application
+  app.enableCors({
+    origin: 'http://localhost:3000',
+    credentials: true,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
