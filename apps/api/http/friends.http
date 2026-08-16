@@ -1,0 +1,40 @@
+@baseUrl = http://localhost:3001
+
+# 테스트할 친구 코드
+@friendCode = XO754988
+
+# 받은 친구 요청의 friendship uid
+@friendshipUid = 01a00b0a-396f-740b-a34f-a69223a3eb74
+
+
+### 친구 코드로 사용자 검색
+GET {{baseUrl}}/friends/search?friendCode={{friendCode}}
+
+
+### 친구 요청 보내기
+POST {{baseUrl}}/friends/requests
+Content-Type: application/json
+
+{
+  "friendCode": "{{friendCode}}"
+}
+
+
+### 받은 친구 요청 목록 조회
+GET {{baseUrl}}/friends/requests/received
+
+
+### 친구 요청 승인
+PATCH {{baseUrl}}/friends/requests/{{friendshipUid}}/accept
+
+
+### 친구 요청 거절
+PATCH {{baseUrl}}/friends/requests/{{friendshipUid}}/reject
+
+
+### 친구 목록 조회
+GET {{baseUrl}}/friends
+
+
+### 친구 관계 해제
+DELETE {{baseUrl}}/friends/{{friendshipUid}}

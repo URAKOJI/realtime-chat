@@ -16,7 +16,6 @@ export class UsersController {
   @UseGuards(SessionAuthGuard)
   @Get('me')
   async me(@Req() request: AuthenticatedRequest) {
-    console.log('AuthenticatedRequest:', request.user);
     const user = await this.usersService.findActiveByUid(request.user.uid);
 
     if (!user) {

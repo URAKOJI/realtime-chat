@@ -10,6 +10,16 @@ Content-Type: application/json
   "nickname": "koji"
 }
 
+### 회원가입 2 (친구 추가용)
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "test3@example.com",
+  "password": "password123!",
+  "nickname": "koji2"
+}
+
 ### 로그인
 POST {{baseUrl}}/auth/login
 Content-Type: application/json
@@ -21,3 +31,12 @@ Content-Type: application/json
 
 #### 로그아웃
 POST {{baseUrl}}/auth/logout
+
+### 로그인 친구 추가용
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "test3@example.com",
+  "password": "password123!"
+}

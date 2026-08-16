@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from '@nestjs/config';
-import { RedisModule } from './redis/redis.module';
+import { FriendsModule } from './friends/friends.module';
 
 @Module({
   imports: [
@@ -10,7 +10,7 @@ import { RedisModule } from './redis/redis.module';
       envFilePath: '.env',
     }),
     AuthModule,
-    RedisModule,
+    FriendsModule,
   ],
 })
 export class AppModule {}

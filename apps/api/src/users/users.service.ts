@@ -20,7 +20,13 @@ export class UsersService {
 
   async findByFriendCode(friendCode: string) {
     return this.prisma.user.findUnique({
-      where: { friendCode },
+      where: { friendCode, deletedAt: null },
+      select: {
+        id: true,
+        uid: true,
+        nickname: true,
+        friendCode: true,
+      },
     });
   }
 

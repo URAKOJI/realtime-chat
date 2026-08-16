@@ -5,7 +5,7 @@ import { UsersModule } from 'src/users/users.module';
 import { RedisModule } from 'src/redis/redis.module';
 
 @Module({
-  imports: [UsersModule, RedisModule],
+  imports: [RedisModule, UsersModule],
   controllers: [AuthController],
   providers: [AuthService],
 })
