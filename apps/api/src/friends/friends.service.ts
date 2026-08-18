@@ -242,12 +242,14 @@ export class FriendsService {
         requesterId: true,
         requester: {
           select: {
+            uid: true,
             friendCode: true,
             nickname: true,
           },
         },
         receiver: {
           select: {
+            uid: true,
             friendCode: true,
             nickname: true,
           },
@@ -263,6 +265,7 @@ export class FriendsService {
 
       return {
         friendshipUid: friendship.uid,
+        uid: friend.uid,
         friendCode: friend.friendCode,
         nickname: friend.nickname,
       };

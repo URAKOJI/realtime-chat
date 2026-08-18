@@ -24,6 +24,7 @@ model User {
 
   sentFriendRequests     Friendship[] @relation("FriendshipRequester")
   receivedFriendRequests Friendship[] @relation("FriendshipReceiver")
+  chatRoomMembers ChatRoomMember[]
 
   @@map("users")
 }
@@ -51,4 +52,29 @@ model Friendship {
   @@index([receiverId])
   @@index([status])
   @@map("friendships")
+}
+
+model ChatRoom {
+  id        BigInt   @id @default(autoincrement())
+  uid       String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  members ChatRoomMember[]
+
+  @@map("chat_rooms")
+}
+
+model ChatRoomMember {
+  id         BigInt   @id @default(autoincrement())
+  chatRoomId BigInt
+  userId     BigInt
+  joinedAt   DateTime @default(now())
+
+  chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+
+  @@unique([chatRoomId, userId])
+  @@index([userId])
+  @@map("chat_room_members")
 }

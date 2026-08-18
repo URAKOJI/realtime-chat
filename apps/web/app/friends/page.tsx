@@ -24,6 +24,7 @@ interface FriendRequest {
 
 interface Friend {
   friendshipUid: string;
+  uid: string;
   friendCode: string;
   nickname: string;
 }
@@ -251,6 +252,29 @@ export default function FriendsPage() {
     }
   };
 
+  const handleStartChat = async (friendUid: string) => {
+    try {
+      const response = await apiFetch(`/chat-rooms`, {
+        method: 'POST',
+        body: JSON.stringify({
+          friendUid,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('채팅방 생성에 실패했습니다.');
+      }
+
+      const room = (await response.json()) as {
+        uid: string;
+      };
+
+      router.push(`/chats/${room.uid}`);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   if (isLoading) {
     return (
       <main className="p-8">
@@ -408,6 +432,10 @@ export default function FriendsPage() {
                     className="rounded border border-red-300 px-3 py-1.5 text-sm text-red-600"
                   >
                     친구 해제
+                  </button>
+
+                  <button onClick={() => handleStartChat(friend.uid)}>
+                    채팅하기
                   </button>
                 </li>
               ))}

@@ -4,7 +4,7 @@
 @friendCode = XO754988
 
 # 받은 친구 요청의 friendship uid
-@friendshipUid = 01a00b0a-396f-740b-a34f-a69223a3eb74
+@friendshipUid = 01a00b3b-f2b9-727d-b5f0-bdaf28a7dd7b
 
 
 ### 친구 코드로 사용자 검색

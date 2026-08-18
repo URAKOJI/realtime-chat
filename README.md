@@ -2,7 +2,7 @@
 
 NestJS와 Socket.IO를 기반으로 구현하는 실시간 1:1 채팅 서비스입니다.
 
-사용자 및 친구 관계와 같은 관계형 데이터는 PostgreSQL에 저장하고, 지속적으로 누적되는 채팅 메시지는 MongoDB에 저장합니다. Redis는 로그인 세션 관리와 향후 Socket.IO 서버 확장을 위한 Pub/Sub 용도로 활용합니다.
+사용자, 친구 관계, 채팅방과 같은 관계형 데이터는 PostgreSQL에 저장하고, 지속적으로 누적되는 채팅 메시지는 MongoDB에 저장합니다. Redis는 로그인 세션 관리와 향후 Socket.IO 서버 확장을 위한 Pub/Sub 용도로 활용합니다.
 
 프론트엔드는 Next.js를 사용하며, 개발 환경의 PostgreSQL, MongoDB, Redis는 Docker Compose를 통해 구성합니다.
 
@@ -80,19 +80,29 @@ realtime-chat/
 - 친구 요청 승인 / 거절
 - 친구 목록 조회
 - 친구 관계 해제
+- 친구 관계인 사용자 간 1:1 채팅방 생성
+- 기존 1:1 채팅방 재사용
+- 채팅방 목록 조회
+- Socket.IO 기반 실시간 연결
+- Redis Session 기반 Socket 인증
+- 채팅방 참여자 검증 및 입장
+- 실시간 메시지 송수신
+- MongoDB 기반 채팅 메시지 저장
+- 채팅방별 이전 메시지 조회
+- Cursor 기반 이전 메시지 Pagination
+- 채팅방 진입 시 최신 메시지 위치로 자동 이동
+- 과거 메시지 조회 중 새 메시지 수신 시 스크롤 위치 유지
+- 내가 보낸 메시지 전송 시 최신 메시지 위치로 이동
+- 채팅방 상대방 정보 조회 및 표시
 
 향후 다음 기능을 구현할 예정입니다.
 
-- 친구 관계인 사용자 간 1:1 채팅방 생성
-- Socket.IO 기반 실시간 메시지 송수신
-- MongoDB 기반 채팅 메시지 저장 및 조회
-- 채팅방별 이전 메시지 조회
 - 읽지 않은 메시지 수
 - 메시지 읽음 처리
 - 사용자 온라인 / 오프라인 상태
 - 마지막 메시지 기반 채팅방 정렬
 - Socket.IO Redis Adapter를 활용한 다중 서버 환경
-- 테스트 코드
+- 주요 비즈니스 로직 테스트 코드
 
 ## Architecture
 
@@ -124,8 +134,8 @@ NestJS
 
 ```text
 Host
-├── Next.js
-└── NestJS
+├── Next.js (3000)
+└── NestJS (3001)
 
 Docker / Colima
 ├── PostgreSQL
@@ -160,6 +170,12 @@ REDIS_PORT=6379
 ```
 
 `.env` 파일은 Git에 포함하지 않습니다.
+
+Next.js에서는 API 서버 주소를 다음 환경변수로 사용합니다.
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+```
 
 ## Docker
 
@@ -265,20 +281,25 @@ docker volume ls
 
 ### Phase 4 - Chat
 
-- [ ] 1:1 채팅방 생성
-- [ ] 친구 관계 검증
-- [ ] Socket.IO 연결
-- [ ] 채팅방 입장
-- [ ] 실시간 메시지 송수신
-- [ ] MongoDB 메시지 저장
-- [ ] 이전 메시지 조회
+- [x] 1:1 채팅방 생성
+- [x] 친구 관계 검증
+- [x] 기존 1:1 채팅방 재사용
+- [x] 채팅방 목록 조회
+- [x] Socket.IO 연결
+- [x] Redis Session 기반 Socket 인증
+- [x] 채팅방 참여자 검증 및 입장
+- [x] 실시간 메시지 송수신
+- [x] MongoDB 메시지 저장
+- [x] 이전 메시지 조회
+- [x] Cursor 기반 이전 메시지 Pagination
+- [x] 채팅 스크롤 UX 처리
 
 ### Phase 5 - Improvements
 
+- [ ] 마지막 메시지 기반 채팅방 정렬
 - [ ] 읽지 않은 메시지 수
 - [ ] 메시지 읽음 처리
 - [ ] 사용자 접속 상태
-- [ ] 채팅방 최근 메시지 정렬
 - [ ] Socket.IO Redis Adapter
 - [ ] NestJS 다중 인스턴스 환경 테스트
 - [ ] 주요 비즈니스 로직 테스트 코드 작성
@@ -306,6 +327,8 @@ ChatRoomMember
 Message
 ```
 
+채팅 메시지는 채팅방 식별자와 생성 순서를 기준으로 조회하며, Cursor 기반 Pagination을 통해 이전 메시지를 순차적으로 불러옵니다.
+
 ### Redis
 
 영구 저장보다 빠른 접근과 일시적인 상태 관리가 필요한 데이터를 관리합니다.
@@ -316,12 +339,50 @@ Presence
 Socket.IO Pub/Sub
 ```
 
+현재는 로그인 세션 저장소로 사용하며, Socket.IO 연결 시에도 동일한 세션 정보를 이용해 사용자를 인증합니다.
+
+## Chat Flow
+
+```text
+친구 목록
+   │
+   │ 채팅하기
+   ▼
+1:1 채팅방 생성 또는 기존 채팅방 조회
+   │
+   ▼
+채팅방 화면
+   │
+   ├── REST API로 이전 메시지 조회
+   │
+   └── Socket.IO 연결
+          │
+          ├── Redis Session 인증
+          ├── 채팅방 참여자 검증
+          └── Socket Room 입장
+                    │
+                    ▼
+               message:send
+                    │
+                    ▼
+              MongoDB 저장
+                    │
+                    ▼
+               message:new
+                    │
+             ┌──────┴──────┐
+             ▼             ▼
+          사용자 A       사용자 B
+```
+
 ## Status
 
-Docker 기반 PostgreSQL, MongoDB, Redis 개발 환경과 Prisma 기반 사용자 및 친구 관계 스키마 구성이 완료되었습니다.
+Docker 기반 PostgreSQL, MongoDB, Redis 개발 환경과 Prisma 기반 사용자, 친구 관계, 채팅방 스키마 구성이 완료되었습니다.
 
-현재 회원가입, 로그인, 로그아웃, Redis 세션 관리, HttpOnly Cookie 기반 인증, SessionAuthGuard, 인증 사용자 정보 조회 기능을 구현했습니다.
+회원가입, 로그인, 로그아웃, Redis 세션 관리, HttpOnly Cookie 기반 인증, SessionAuthGuard, 인증 사용자 정보 조회 기능을 구현했습니다.
 
-친구 코드 기반 사용자 검색, 친구 요청, 받은 요청 조회, 승인 및 거절, 친구 목록 조회, 친구 관계 해제 기능까지 구현된 상태입니다.
+친구 코드 기반 사용자 검색, 친구 요청, 받은 요청 조회, 승인 및 거절, 친구 목록 조회, 친구 관계 해제 기능을 구현했습니다.
 
-다음 단계에서는 친구 관계인 사용자 간 1:1 채팅방과 실시간 메시지 처리 기능을 구현할 예정입니다.
+친구 관계인 사용자 간 1:1 채팅방 생성과 기존 채팅방 재사용, Socket.IO 기반 실시간 메시지 송수신, Redis Session 기반 Socket 인증, MongoDB 메시지 저장 및 Cursor 기반 이전 메시지 조회 기능까지 구현된 상태입니다.
+
+다음 단계에서는 채팅방 목록의 최근 메시지 표시 및 정렬, 메시지 읽음 처리와 읽지 않은 메시지 수, 사용자 접속 상태 기능을 순차적으로 구현할 예정입니다.

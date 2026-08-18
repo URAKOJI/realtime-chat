@@ -6,11 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuthenticatedRequest } from 'src/common/types/authenticated-request.type';
 import { RedisService } from 'src/redis/redis.service';
-
-interface SessionData {
-  userUid: string;
-  createdAt: string;
-}
+import { SessionData } from '../types/session-data.type';
 
 @Injectable()
 export class SessionAuthGuard implements CanActivate {
