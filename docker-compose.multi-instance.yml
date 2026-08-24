@@ -1,0 +1,80 @@
+services:
+  api-a:
+    build:
+      context: ./apps/api
+
+    environment:
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL}
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+    ports:
+      - '3001:3001'
+
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - realtime-chat-network
+
+  api-b:
+    build:
+      context: ./apps/api
+
+    environment:
+      PORT: 3002
+      DATABASE_URL: ${DATABASE_URL}
+      MONGODB_URI: ${MONGODB_URI}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+
+    ports:
+      - '3002:3002'
+
+    depends_on:
+      mongo:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    networks:
+      - realtime-chat-network
+
+  web-a:
+    build:
+      context: ./apps/web
+
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3001
+
+    ports:
+      - '3000:3000'
+
+    depends_on:
+      - api-a
+
+  web-b:
+    build:
+      context: ./apps/web
+
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:3002
+
+    command: npm run dev -- --port 3003
+
+    ports:
+      - '3003:3003'
+
+    depends_on:
+      - api-b

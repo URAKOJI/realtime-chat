@@ -64,6 +64,8 @@ services:
         'yes',
         '--requirepass',
         '${REDIS_PASSWORD}',
+        '--notify-keyspace-events',
+        'Ex',
       ]
 
     ports:

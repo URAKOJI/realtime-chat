@@ -3,13 +3,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { FRIENDSHIP_STATUS } from 'friends/constants/friendship-status.constant';
+import { FRIENDSHIP_STATUS } from 'src/friends/constants/friendship-status.constant';
+import { MessagesService } from 'src/messages/messages.service';
+import { PresenceService } from 'src/presence/presence.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { v7 as uuidv7 } from 'uuid';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly messagesService: MessagesService,
+    private readonly presenceService: PresenceService,
+  ) {}
 
   async createOneToOneRoom(currentUserUid: string, friendUid: string) {
     if (currentUserUid === friendUid) {
@@ -187,12 +193,47 @@ export class ChatService {
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
     });
 
-    return rooms.map((room) => this.mapRoom(room, currentUserUid));
+    const chatRooms = await Promise.all(
+      rooms.map(async (room) => {
+        const currentMember = room.members.find(
+          (member) => member.user.uid === currentUserUid,
+        );
+
+        const [unreadCount, lastMessage] = await Promise.all([
+          this.messagesService.countUnreadMessages(
+            room.uid,
+            currentUserUid,
+            currentMember?.lastReadMessageId ?? null,
+          ),
+
+          this.messagesService.findLastMessageByChatRoomUid(room.uid),
+        ]);
+
+        const mapRoomsResult = await this.mapRoom(room, currentUserUid);
+
+        return {
+          ...mapRoomsResult,
+          unreadCount,
+          lastMessage,
+        };
+      }),
+    );
+
+    chatRooms.sort((a, b) => {
+      const aTime = a.lastMessage
+        ? new Date(a.lastMessage.createdAt).getTime()
+        : new Date(a.createdAt).getTime();
+
+      const bTime = b.lastMessage
+        ? new Date(b.lastMessage.createdAt).getTime()
+        : new Date(b.createdAt).getTime();
+
+      return bTime - aTime;
+    });
+
+    return chatRooms;
   }
 
   async validateRoomMember(chatRoomUid: string, userUid: string) {
@@ -262,6 +303,10 @@ export class ChatService {
       (member) => member.user.uid !== currentUserUid,
     )?.user;
 
+    const isOnline = friend
+      ? await this.presenceService.isOnline(friend.uid)
+      : false;
+
     return {
       uid: room.uid,
       friend: friend
@@ -269,13 +314,81 @@ export class ChatService {
             uid: friend.uid,
             nickname: friend.nickname,
             friendCode: friend.friendCode,
+            isOnline,
           }
         : null,
       createdAt: room.createdAt,
     };
   }
 
-  private mapRoom(
+  async findRoomMember(chatRoomUid: string, userUid: string) {
+    const member = await this.prisma.chatRoomMember.findFirst({
+      where: {
+        chatRoom: {
+          uid: chatRoomUid,
+        },
+        user: {
+          uid: userUid,
+        },
+      },
+      select: {
+        id: true,
+        lastReadMessageId: true,
+      },
+    });
+
+    if (!member) {
+      throw new ForbiddenException('채팅방에 접근할 권한이 없습니다.');
+    }
+
+    return member;
+  }
+
+  async updateLastReadMessage(
+    memberId: bigint,
+    previousMessageId: string | null,
+    messageId: string,
+  ) {
+    const result = await this.prisma.chatRoomMember.updateMany({
+      where: {
+        id: memberId,
+        lastReadMessageId: previousMessageId,
+      },
+      data: {
+        lastReadMessageId: messageId,
+        lastReadAt: new Date(),
+      },
+    });
+
+    return result.count > 0;
+  }
+
+  async findRoomMemberUids(chatRoomUid: string): Promise<string[]> {
+    const room = await this.prisma.chatRoom.findUnique({
+      where: {
+        uid: chatRoomUid,
+      },
+      select: {
+        members: {
+          select: {
+            user: {
+              select: {
+                uid: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!room) {
+      throw new NotFoundException('채팅방을 찾을 수 없습니다.');
+    }
+
+    return room.members.map((member) => member.user.uid);
+  }
+
+  private async mapRoom(
     room: {
       uid: string;
       createdAt: Date;
@@ -293,6 +406,10 @@ export class ChatService {
       (member) => member.user.uid !== currentUserUid,
     )?.user;
 
+    const isOnline = friend
+      ? await this.presenceService.isOnline(friend.uid)
+      : false;
+
     return {
       uid: room.uid,
       friend: friend
@@ -300,6 +417,7 @@ export class ChatService {
             uid: friend.uid,
             friendCode: friend.friendCode,
             nickname: friend.nickname,
+            isOnline,
           }
         : null,
       createdAt: room.createdAt,

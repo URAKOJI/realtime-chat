@@ -5,6 +5,8 @@ import { FriendsModule } from './friends/friends.module';
 import { ChatModule } from './chat/chat.module';
 import { MongooseModule } from '@nestjs/mongoose';
 import { MessagesModule } from './messages/messages.module';
+import { PresenceModule } from './presence/presence.module';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 @Module({
   imports: [
@@ -12,6 +14,7 @@ import { MessagesModule } from './messages/messages.module';
       isGlobal: true,
       envFilePath: '.env',
     }),
+    EventEmitterModule.forRoot(),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
@@ -22,6 +25,7 @@ import { MessagesModule } from './messages/messages.module';
     FriendsModule,
     ChatModule,
     MessagesModule,
+    PresenceModule,
   ],
 })
 export class AppModule {}

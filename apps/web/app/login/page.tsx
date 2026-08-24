@@ -4,6 +4,7 @@ import { SubmitEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { apiFetch } from '@/lib/api';
+import Button from '@/components/ui/Button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,65 +43,50 @@ export default function LoginPage() {
   };
 
   return (
-    <main className='flex min-h-screen items-center justify-center p-6'>
-      <div className='w-full max-w-md'>
-        <h1 className='mb-8 text-2xl font-bold'>로그인</h1>
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <h1 className="mb-8 text-2xl font-bold">로그인</h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className='flex flex-col gap-4'
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label
-              htmlFor='email'
-              className='mb-1 block'
-            >
+            <label htmlFor="email" className="mb-1 block">
               이메일
             </label>
 
             <input
-              id='email'
-              type='email'
+              id="email"
+              type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className='w-full rounded border p-2'
-              autoComplete='email'
+              className="w-full rounded border p-2"
+              autoComplete="email"
               required
             />
           </div>
 
           <div>
-            <label
-              htmlFor='password'
-              className='mb-1 block'
-            >
+            <label htmlFor="password" className="mb-1 block">
               비밀번호
             </label>
 
             <input
-              id='password'
-              type='password'
+              id="password"
+              type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className='w-full rounded border p-2'
-              autoComplete='current-password'
+              className="w-full rounded border p-2"
+              autoComplete="current-password"
               required
             />
           </div>
 
           {errorMessage && (
-            <p className='text-sm text-red-500'>
-              {errorMessage}
-            </p>
+            <p className="text-sm text-red-500">{errorMessage}</p>
           )}
 
-          <button
-            type='submit'
-            disabled={isLoading}
-            className='rounded bg-black p-2 text-white disabled:opacity-50'
-          >
+          <Button type="submit" disabled={isLoading} className="mt-4">
             {isLoading ? '로그인 중...' : '로그인'}
-          </button>
+          </Button>
         </form>
       </div>
     </main>

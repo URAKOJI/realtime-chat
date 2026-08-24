@@ -9,4 +9,5 @@ if (!API_URL) {
 export const socket: Socket = io(API_URL, {
   autoConnect: false,
   withCredentials: true,
+  transports: ['websocket'],
 });

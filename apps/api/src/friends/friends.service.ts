@@ -5,7 +5,8 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { FRIENDSHIP_STATUS } from 'friends/constants/friendship-status.constant';
+import { FRIENDSHIP_STATUS } from 'src/friends/constants/friendship-status.constant';
+import { PresenceService } from 'src/presence/presence.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { UsersService } from 'src/users/users.service';
 import { v7 as uuidv7 } from 'uuid';
@@ -15,6 +16,7 @@ export class FriendsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
+    private readonly presenceService: PresenceService,
   ) {}
 
   async searchByFriendCode(friendCode: string) {
@@ -257,19 +259,24 @@ export class FriendsService {
       },
     });
 
-    return friendships.map((friendship) => {
-      const friend =
-        friendship.requesterId === currentUser.id
-          ? friendship.receiver
-          : friendship.requester;
+    return Promise.all(
+      friendships.map(async (friendship) => {
+        const friend =
+          friendship.requesterId === currentUser.id
+            ? friendship.receiver
+            : friendship.requester;
 
-      return {
-        friendshipUid: friendship.uid,
-        uid: friend.uid,
-        friendCode: friend.friendCode,
-        nickname: friend.nickname,
-      };
-    });
+        const isOnline = await this.presenceService.isOnline(friend.uid);
+
+        return {
+          friendshipUid: friendship.uid,
+          uid: friend.uid,
+          friendCode: friend.friendCode,
+          nickname: friend.nickname,
+          isOnline,
+        };
+      }),
+    );
   }
 
   async removeFriend(
@@ -309,6 +316,54 @@ export class FriendsService {
       data: {
         deletedAt: new Date(),
       },
+    });
+  }
+
+  async findFriendUids(userUid: string): Promise<string[]> {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        uid: userUid,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!user) {
+      return [];
+    }
+
+    const friendships = await this.prisma.friendship.findMany({
+      where: {
+        status: FRIENDSHIP_STATUS.ACCEPTED,
+        deletedAt: null,
+        OR: [
+          {
+            requesterId: user.id,
+          },
+          {
+            receiverId: user.id,
+          },
+        ],
+      },
+      include: {
+        requester: {
+          select: {
+            uid: true,
+          },
+        },
+        receiver: {
+          select: {
+            uid: true,
+          },
+        },
+      },
+    });
+
+    return friendships.map((friendship) => {
+      return friendship.requesterId === user.id
+        ? friendship.receiver.uid
+        : friendship.requester.uid;
     });
   }
 

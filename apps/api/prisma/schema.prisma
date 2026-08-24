@@ -1,6 +1,7 @@
 generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
+  importFileExtension = ""
   moduleFormat = "cjs"
 }
 
@@ -70,6 +71,8 @@ model ChatRoomMember {
   chatRoomId BigInt
   userId     BigInt
   joinedAt   DateTime @default(now())
+  lastReadMessageId String?   @db.VarChar(24)
+  lastReadAt        DateTime?
 
   chatRoom ChatRoom @relation(fields: [chatRoomId], references: [id])
   user     User     @relation(fields: [userId], references: [id])

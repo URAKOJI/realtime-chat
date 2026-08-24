@@ -5,6 +5,7 @@ import type { SubmitEvent } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { apiFetch } from '@/lib/api';
+import Button from '@/components/ui/Button';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -50,84 +51,66 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className='flex min-h-screen items-center justify-center p-6'>
-      <div className='w-full max-w-md'>
-        <h1 className='mb-8 text-2xl font-bold'>회원가입</h1>
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <h1 className="mb-8 text-2xl font-bold">회원가입</h1>
 
-        <form
-          onSubmit={handleSubmit}
-          className='flex flex-col gap-4'
-        >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
-            <label
-              htmlFor='email'
-              className='mb-1 block'
-            >
+            <label htmlFor="email" className="mb-1 block">
               이메일
             </label>
 
             <input
-              id='email'
-              type='email'
+              id="email"
+              type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className='w-full rounded border p-2'
-              autoComplete='email'
+              className="w-full rounded border p-2"
+              autoComplete="email"
               required
             />
           </div>
 
           <div>
-            <label
-              htmlFor='nickname'
-              className='mb-1 block'
-            >
+            <label htmlFor="nickname" className="mb-1 block">
               닉네임
             </label>
 
             <input
-              id='nickname'
-              type='text'
+              id="nickname"
+              type="text"
               value={nickname}
               onChange={(event) => setNickname(event.target.value)}
-              className='w-full rounded border p-2'
+              className="w-full rounded border p-2"
               required
             />
           </div>
 
           <div>
-            <label
-              htmlFor='password'
-              className='mb-1 block'
-            >
+            <label htmlFor="password" className="mb-1 block">
               비밀번호
             </label>
 
             <input
-              id='password'
-              type='password'
+              id="password"
+              type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className='w-full rounded border p-2'
-              autoComplete='new-password'
+              className="w-full rounded border p-2"
+              autoComplete="new-password"
               minLength={8}
               required
             />
           </div>
 
           {errorMessage && (
-            <p className='text-sm text-red-500'>
-              {errorMessage}
-            </p>
+            <p className="text-sm text-red-500">{errorMessage}</p>
           )}
 
-          <button
-            type='submit'
-            disabled={isLoading}
-            className='rounded bg-black p-2 text-white disabled:opacity-50'
-          >
+          <Button fullWidth type="submit" disabled={isLoading}>
             {isLoading ? '가입 중...' : '회원가입'}
-          </button>
+          </Button>
         </form>
       </div>
     </main>

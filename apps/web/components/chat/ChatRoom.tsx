@@ -1,8 +1,9 @@
 'use client';
 
-import { SubmitEvent, useEffect, useState, useRef } from 'react';
+import { SubmitEvent, useEffect, useState, useRef, useCallback } from 'react';
 import { socket } from '@/lib/socket';
 import { apiFetch } from '@/lib/api';
+import Button from '../ui/Button';
 
 interface Props {
   chatRoomUid: string;
@@ -19,6 +20,7 @@ interface ChatRoomInfo {
     uid: string;
     nickname: string;
     friendCode: string;
+    isOnline: boolean;
   } | null;
   createdAt: string;
 }
@@ -65,6 +67,11 @@ export default function ChatRoom({ chatRoomUid }: Props) {
   const isNearBottomRef = useRef(true);
   // 이전 메시지 조회 중인지 추적하기 위해 ref 사용
   const loadingPreviousRef = useRef(false);
+  // 페이지가 보이는지 추적하기 위해 ref 사용
+  const isPageVisibleRef = useRef(true);
+  const isWindowFocusedRef = useRef(true);
+  // 채팅방 입장 여부를 추적하기 위해 ref 사용
+  const joinedRef = useRef(false);
 
   /**
    * 로그인 사용자 조회
@@ -121,6 +128,66 @@ export default function ChatRoom({ chatRoomUid }: Props) {
     initialScrollDoneRef.current = true;
   }, [messages]);
 
+  useEffect(() => {
+    const handlePresenceUpdate = (data: {
+      userUid: string;
+      isOnline: boolean;
+    }) => {
+      setRoomInfo((prev) => {
+        if (!prev?.friend || prev.friend.uid !== data.userUid) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          friend: {
+            ...prev.friend,
+            isOnline: data.isOnline,
+          },
+        };
+      });
+    };
+
+    socket.on('presence:update', handlePresenceUpdate);
+
+    return () => {
+      socket.off('presence:update', handlePresenceUpdate);
+    };
+  }, []);
+
+  /**
+   * 메시지 읽음 처리
+   */
+  const markMessageAsRead = useCallback(
+    (messageId: string) => {
+      if (
+        !joinedRef.current ||
+        !isPageVisibleRef.current ||
+        !isWindowFocusedRef.current
+      ) {
+        return;
+      }
+
+      socket.emit(
+        'message:read',
+        {
+          chatRoomUid,
+          messageId,
+        },
+        (response: {
+          success: boolean;
+          messageId?: string;
+          message?: string;
+        }) => {
+          if (!response.success) {
+            console.error('메시지 읽음 처리 실패:', response.message);
+          }
+        },
+      );
+    },
+    [chatRoomUid],
+  );
+
   /**
    * 이전 메시지 조회
    */
@@ -135,19 +202,22 @@ export default function ChatRoom({ chatRoomUid }: Props) {
 
         const data = (await response.json()) as MessagesResponse;
 
-        /**
-         * API가 createdAt DESC로 반환한다면
-         * 화면에서는 오래된 → 최신 순으로 보여주기 위해 reverse
-         */
-        setMessages([...data.messages].reverse());
+        const orderedMessages = [...data.messages].reverse();
+
+        setMessages(orderedMessages);
         setNextCursor(data.nextCursor);
+        const latestMessage = orderedMessages[orderedMessages.length - 1];
+
+        if (latestMessage && joinedRef.current) {
+          markMessageAsRead(latestMessage._id);
+        }
       } catch (error) {
         console.error(error);
       }
     };
 
     void fetchMessages();
-  }, [chatRoomUid]);
+  }, [chatRoomUid, markMessageAsRead]);
 
   const fetchPreviousMessages = async () => {
     if (!nextCursor || loadingPreviousRef.current) {
@@ -228,6 +298,7 @@ export default function ChatRoom({ chatRoomUid }: Props) {
           }
 
           setJoined(true);
+          joinedRef.current = true;
         },
       );
     };
@@ -235,6 +306,7 @@ export default function ChatRoom({ chatRoomUid }: Props) {
     const handleDisconnect = () => {
       setConnected(false);
       setJoined(false);
+      joinedRef.current = false;
     };
 
     socket.on('connect', handleConnect);
@@ -246,15 +318,14 @@ export default function ChatRoom({ chatRoomUid }: Props) {
      */
     if (socket.connected) {
       handleConnect();
-    } else {
-      socket.connect();
     }
 
     return () => {
       socket.off('connect', handleConnect);
       socket.off('disconnect', handleDisconnect);
-
-      socket.disconnect();
+      socket.emit('chat:leave', {
+        chatRoomUid,
+      });
     };
   }, [chatRoomUid]);
 
@@ -283,6 +354,7 @@ export default function ChatRoom({ chatRoomUid }: Props) {
           scrollToBottom('smooth');
         });
       }
+      markMessageAsRead(message._id);
     };
 
     socket.on('message:new', handleNewMessage);
@@ -290,7 +362,7 @@ export default function ChatRoom({ chatRoomUid }: Props) {
     return () => {
       socket.off('message:new', handleNewMessage);
     };
-  }, [chatRoomUid, , currentUser?.uid]);
+  }, [chatRoomUid, currentUser?.uid, markMessageAsRead]);
 
   /**
    * 메시지 전송
@@ -334,24 +406,70 @@ export default function ChatRoom({ chatRoomUid }: Props) {
     );
   };
 
+  // 페이지가 보이는지 추적
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      isPageVisibleRef.current = document.visibilityState === 'visible';
+    };
+
+    const handleFocus = () => {
+      isWindowFocusedRef.current = true;
+    };
+
+    const handleBlur = () => {
+      isWindowFocusedRef.current = false;
+    };
+
+    handleVisibilityChange();
+    isWindowFocusedRef.current = document.hasFocus();
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, []);
+
   return (
     <main className="mx-auto flex h-screen max-w-2xl flex-col border-x">
       <header className="border-b p-4">
-        <h1 className="font-bold">{roomInfo?.friend?.nickname ?? '채팅방'}</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="font-bold">
+            {roomInfo?.friend?.nickname ?? '채팅방'}
+          </h1>
+
+          {roomInfo?.friend && (
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${
+                roomInfo.friend.isOnline ? 'bg-green-500' : 'bg-gray-400'
+              }`}
+            />
+          )}
+
+          {roomInfo?.friend && (
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {roomInfo.friend.isOnline ? '온라인' : '오프라인'}
+            </span>
+          )}
+        </div>
 
         {roomInfo?.friend && (
-          <div className="mt-1 text-xs text-gray-500">
-            {roomInfo.friend.friendCode}
+          <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            친구 코드: {roomInfo.friend.friendCode}
           </div>
         )}
 
-        <div className="mt-1 text-xs text-gray-400">
-          {connected
-            ? joined
-              ? '채팅방 연결됨'
-              : '채팅방 입장 중'
-            : '서버 연결 중'}
-        </div>
+        {!joined && (
+          <div className="mt-1 text-xs text-gray-400">
+            {connected ? '채팅방 입장 중...' : '서버 연결 중...'}
+          </div>
+        )}
       </header>
 
       <section
@@ -440,13 +558,14 @@ export default function ChatRoom({ chatRoomUid }: Props) {
             className="flex-1 rounded-lg border px-3 py-2 disabled:bg-gray-100"
           />
 
-          <button
+          <Button
             type="submit"
+            variant="accent"
             disabled={!joined || !content.trim() || sending}
-            className="rounded-lg bg-blue-500 px-4 py-2 text-white disabled:bg-gray-300"
+            className="rounded-lg  px-4 py-2"
           >
             전송
-          </button>
+          </Button>
         </div>
       </form>
     </main>

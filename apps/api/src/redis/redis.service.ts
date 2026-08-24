@@ -5,6 +5,7 @@ import { createClient, RedisClientType } from 'redis';
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private readonly client: RedisClientType;
+  private subscriber: RedisClientType | null = null;
 
   constructor(private readonly configService: ConfigService) {
     const host = this.configService.getOrThrow<string>('REDIS_HOST');
@@ -21,9 +22,27 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    if (this.subscriber?.isOpen) {
+      await this.subscriber.quit();
+    }
+
     if (this.client.isOpen) {
       await this.client.quit();
     }
+  }
+
+  async subscribeExpired(
+    listener: (key: string) => void | Promise<void>,
+  ): Promise<void> {
+    if (!this.subscriber) {
+      this.subscriber = this.client.duplicate();
+
+      await this.subscriber.connect();
+    }
+
+    await this.subscriber.subscribe('__keyevent@0__:expired', (key) => {
+      void listener(key);
+    });
   }
 
   async get(key: string): Promise<string | null> {
@@ -44,5 +63,18 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   async del(key: string): Promise<void> {
     await this.client.del(key);
+  }
+
+  async setIfNotExists(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
+    const result = await this.client.set(key, value, {
+      NX: true,
+      EX: ttlSeconds,
+    });
+
+    return result === 'OK';
   }
 }

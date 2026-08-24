@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
+import Button from '../ui/Button';
 
 interface AddFriendModalProps {
   open: boolean;
@@ -123,13 +124,14 @@ export default function AddFriendModal({ open, onClose }: AddFriendModalProps) {
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-xl font-bold">친구 추가</h2>
 
-          <button
+          <Button
+            variant="ghost"
             type="button"
             onClick={handleClose}
-            className="text-gray-500 hover:text-black"
+            className="px-0 py-0"
           >
             닫기
-          </button>
+          </Button>
         </div>
 
         <div className="flex gap-2">
@@ -147,14 +149,17 @@ export default function AddFriendModal({ open, onClose }: AddFriendModalProps) {
             className="min-w-0 flex-1 rounded border bg-white p-2 text-black dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
           />
 
-          <button
+          <Button
+            variant="primary"
             type="button"
-            onClick={handleSearch}
+            onClick={() => {
+              void handleSearch();
+            }}
             disabled={isSearching}
-            className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
+            className="px-4 py-2"
           >
             {isSearching ? '검색 중...' : '검색'}
-          </button>
+          </Button>
         </div>
 
         {errorMessage && (
@@ -180,18 +185,21 @@ export default function AddFriendModal({ open, onClose }: AddFriendModalProps) {
                 </p>
               </div>
 
-              <button
+              <Button
+                variant="primary"
                 type="button"
-                onClick={handleSendRequest}
+                onClick={() => {
+                  void handleSendRequest();
+                }}
                 disabled={isRequesting || Boolean(successMessage)}
-                className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+                className="px-4 py-2"
               >
                 {isRequesting
                   ? '요청 중...'
                   : successMessage
                     ? '요청 완료'
                     : '친구 요청'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
